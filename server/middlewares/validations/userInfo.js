@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import * as utils from './utils';
 import { failureResponse } from '../../commonHelpers';
 
@@ -184,9 +185,9 @@ export const validateDeleteUserInputs = (req, res, next) => {
  */
 export const validateResourceID = (req, res, next) => {
   const resourceID = req.params.id;
-  if (utils.isInteger(resourceID)) {
+  if (/^[a-fA-F0-9]{24}$/.test(resourceID)) {
     next();
   } else {
-    return failureResponse(res, 'Resource ID must be an integer');
+    return failureResponse(res, 'Resource ID is not valid');
   }
 };

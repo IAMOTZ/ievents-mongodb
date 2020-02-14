@@ -1,4 +1,5 @@
 import moment from 'moment';
+import mongoose from 'mongoose';
 import { failureResponse } from '../../commonHelpers';
 import * as utils from './utils';
 
@@ -42,8 +43,8 @@ export const validateAddEventInputs = (req, res, next) => {
     if (!centerid) {
       throw new Error('Center is required');
     }
-    if (!utils.isInteger(centerid)) {
-      throw new Error('Center id must be an integer in a string format');
+    if (!(/^[a-fA-F0-9]{24}$/.test(centerid))) {
+      throw new Error('Center id is not valid');
     }
   } catch (error) {
     return failureResponse(res, error.message);
@@ -89,8 +90,8 @@ export const validateUpdateEventInputs = (req, res, next) => {
       }
     }
     // Validating Center ID
-    if (centerid && !utils.isInteger(centerid)) {
-      throw new Error('Center id must be an integer in a string format');
+    if (centerid && !(/^[a-fA-F0-9]{24}$/.test(centerid))) {
+      throw new Error('Center id is not valid');
     }
   } catch (error) {
     return failureResponse(res, error.message);

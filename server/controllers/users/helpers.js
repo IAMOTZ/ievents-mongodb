@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
  */
 export const formatUserData = userData => (
   {
-    id: userData.id,
+    id: userData._id,
     email: userData.email,
     name: userData.name,
     role: userData.role,
@@ -41,10 +41,6 @@ export const verifyPassword = (textPassword, hashedPassword) => (
  * @returns {Object} The user gotten from the database.
  */
 export const getUser = async (userModel, userEmail) => {
-  const user = await userModel.findOne({
-    where: {
-      email: userEmail.toLowerCase(),
-    },
-  });
+  const user = await userModel.findOne({ email: userEmail.toLowerCase() });
   return user;
 };

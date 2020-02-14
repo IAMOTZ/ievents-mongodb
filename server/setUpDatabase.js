@@ -1,14 +1,10 @@
-import db from './models/index';
+// import db from './models-2/index';
+import db from './models';
 import { createSuperAdmin } from './commonHelpers';
 
-const { users } = db;
+const { User } = db;
 
-// Synchronizes the sequelize configurations with the database and then
-// creates the superAdmin if he does not exit.
-db.sequelize.sync()
-  .then(() => {
-    createSuperAdmin(users)
-      .then(() => {
-        process.exit();
-      });
-  });
+createSuperAdmin(User).then(() => {
+  process.exit();
+});
+

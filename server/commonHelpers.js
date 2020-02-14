@@ -1,5 +1,4 @@
 /* eslint-disable no-else-return */
-import sequelize from 'sequelize';
 import dotEnv from 'dotenv';
 import cloudinary from 'cloudinary';
 import nodemailer from 'nodemailer';
@@ -11,8 +10,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SERCRET,
 });
 
-
-const { Op } = sequelize;
 
 /**
  * Compares two date time to see which one is larger.
@@ -52,27 +49,16 @@ export const getCurrentDate = (timeZoneOffset) => {
  */
 export const updateEventStatus = async (eventModel) => {
   const currentDate = getCurrentDate(1); // Get the current time in Nigeria;
-  const doneEvents = await eventModel.all({
-    attributes: ['id', 'date'],
-    where: {
-      status: {
-        [Op.ne]: 'done',
-      },
-    },
-  });
+  const doneEvents = await eventModel.find({
+    status: { $ne: 'done' }
+  }, { _id: 1, date: 1 });
   const doneEventIds = [];
   doneEvents.forEach((event) => {
     if (compareDate(currentDate, new Date(event.date), 24 * 60 * 60 * 1000)) {
-      doneEventIds.push(event.id);
+      doneEventIds.push(event._id);
     }
   });
-  await eventModel.update({ status: 'done' }, {
-    where: {
-      id: {
-        [Op.in]: doneEventIds,
-      },
-    },
-  });
+  await eventModel.update({ _id: { $in: doneEventIds } }, { $set: { status: 'done' } });
   return; // eslint-disable-line no-useless-return
 };
 
@@ -82,18 +68,16 @@ export const updateEventStatus = async (eventModel) => {
  * @returns {Object} The superAdmin created.
  */
 export const createSuperAdmin = async (userModel) => {
-  const user = await userModel.findOne({
-    where: {
-      email: process.env.SUPER_ADMIN_EMAIL,
-    },
-  });
+  const user = await userModel.findOne({ email: process.env.SUPER_ADMIN_EMAIL });
   if (!user) {
-    const superAdmin = await userModel.create({
+    const UserModel = userModel;
+    const superAdmin = new UserModel({
       name: process.env.SUPER_ADMIN_NAME,
       email: process.env.SUPER_ADMIN_EMAIL,
       password: process.env.SUPER_ADMIN_PASSWORD,
       role: 'superAdmin',
     });
+    await superAdmin.save();
     return superAdmin;
   }
 };

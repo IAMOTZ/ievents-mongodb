@@ -5,7 +5,7 @@ import {
 } from '../../commonHelpers';
 import { formatUserData, getUser, generateToken, verifyPassword } from './helpers';
 
-const { users } = db;
+const { User, Event } = db;
 
 export default {
   /**
@@ -18,15 +18,16 @@ export default {
     const {
       name, email, password,
     } = res.locals.formattedInputs;
-    const user = await getUser(users, email);
+    const user = await getUser(User, email);
     if (user) {
       return failureResponse(res, 'User already exist');
     } else {
-      const newUser = await users.create({
+      const newUser = new User({
         name,
-        email: email.toLowerCase(),
+        email,
         password,
       });
+      await newUser.save();
       const payload = { token: generateToken(formatUserData(newUser)) };
       return successResponse(res, 'User created', payload, 201);
     }
@@ -40,7 +41,7 @@ export default {
    */
   async signin(req, res) {
     const { email, password } = res.locals.formattedInputs;
-    const user = await getUser(users, email);
+    const user = await getUser(User, email);
     if (!user) {
       return failureResponse(res, 'Email or password incorrect', {}, 404);
     } else if (verifyPassword(password, user.password)) {
@@ -55,9 +56,8 @@ export default {
     const { formerpassword, newpassword } = res.locals.formattedInputs;
     const user = res.locals.currentUser;
     if (verifyPassword(formerpassword, user.password)) {
-      await user.update({
-        password: newpassword,
-      });
+      user.password = newpassword;
+      await user.save();
       return successResponse(res, 'Password changed');
     } else {
       return failureResponse(res, 'The former password is incorrect');
@@ -72,13 +72,14 @@ export default {
    */
   async createAdmin(req, res) {
     const { email } = res.locals.formattedInputs;
-    const user = await getUser(users, email);
+    const user = await getUser(User, email);
     if (!user) {
       return failureResponse(res, 'User not found', {}, 404);
     } else if (user.role === 'admin' || user.role === 'superAdmin') {
       return failureResponse(res, 'The user is already an admin', {}, 409);
     } else {
-      await user.update({ role: 'admin' });
+      user.role = 'admin';
+      await user.save();
       return successResponse(res, 'The user has been updated to become an admin');
     }
   },
@@ -93,11 +94,9 @@ export default {
     const userPassword = res.locals.formattedInputs.password;
     const user = res.locals.currentUser;
     if (verifyPassword(userPassword, user.password)) {
-      await users.destroy({
-        where: {
-          email: user.email,
-        },
-      });
+      await User.remove({ email: user.email });
+      // Delete all the users event
+      await Event.remove({ userId: user._id });
       return successResponse(res, 'user deleted');
     } else {
       return failureResponse(res, 'password incorrect');

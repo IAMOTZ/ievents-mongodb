@@ -7,7 +7,7 @@ import {
   formatEventData, createEmailBody, getCenter, isCenterBooked
 } from './helpers';
 
-const { events, centers, users } = db;
+const { Event, Center } = db;
 
 
 export default {
@@ -20,20 +20,20 @@ export default {
   async getAll(req, res) {
     const userId = req.decoded.id;
     const { limit, offset } = res.locals;
-    const allEvents = await events.findAndCountAll({
-      limit,
-      offset,
-      where: { userId },
-      order: [['createdAt', 'DESC']]
-    });
-    const currentEventsCount = allEvents.rows.length; const totalEventsCount = allEvents.count;
+    const allEvents = await Event.find(
+      { userId },
+      null,
+      { limit, skip: offset, sort: { _id: -1 } }
+    );
+    const totalEventsCount = await Event.count({ userId });
+    const currentEventsCount = allEvents.length;
     const paginationInfo = createPaginationInfo(
       limit,
       offset,
       currentEventsCount,
       totalEventsCount
     );
-    const payload = { paginationInfo, events: allEvents.rows.map(event => formatEventData(event)) };
+    const payload = { paginationInfo, events: allEvents.map(event => formatEventData(event)) };
     return successResponse(res, 'Events successfully retrieved', payload);
   },
 
@@ -46,25 +46,22 @@ export default {
   async getEventsPerCenter(req, res) {
     const centerId = req.params.id;
     const { limit, offset } = res.locals;
-    const allEvents = await events.findAndCountAll({
-      limit,
-      offset,
-      where: { centerId, status: 'allowed' },
-      distinct: true,
-      include: {
-        model: users,
-        attributes: ['email']
-      },
-      order: [['createdAt', 'DESC']]
-    });
-    const currentEventsCount = allEvents.rows.length; const totalEventsCount = allEvents.count;
+    const allEvents = await Event.find(
+      { centerId, status: 'allowed' },
+      null,
+      { limit, skip: offset, sort: { _id: -1 } }
+    ).populate('userId', 'email');
+    const totalEventsCount = await Event.count({ centerId, status: 'allowed' });
+    const currentEventsCount = allEvents.length;
     const paginationInfo = createPaginationInfo(
       limit,
       offset,
       currentEventsCount,
       totalEventsCount
     );
-    const payload = { paginationInfo, events: allEvents.rows };
+    const payload = {
+      paginationInfo, events: allEvents.map(event => formatEventData(event, false, true))
+    };
     return successResponse(res, `Events of center with ID ${centerId} successfully retrieved`, payload);
   },
 
@@ -79,15 +76,15 @@ export default {
       title, description, date, centerid,
     } = res.locals.formattedInputs;
     const userId = req.decoded.id;
-    const chosenCenter = await getCenter(centers, centerid);
+    const chosenCenter = await getCenter(Center, centerid);
     if (!chosenCenter) {
       return failureResponse(res, 'The chosen center does not exist', {}, 404);
     } else {
-      const centerIsBooked = await isCenterBooked(events, centerid, date);
+      const centerIsBooked = await isCenterBooked(Event, centerid, date);
       if (centerIsBooked) {
         return failureResponse(res, 'The center has been booked for that date', {});
       } else {
-        const newEvent = await events.create({
+        const newEvent = new Event({
           title,
           description,
           date,
@@ -95,6 +92,7 @@ export default {
           centerId: centerid,
           centerName: chosenCenter.name,
         });
+        await newEvent.save();
         const payload = { event: formatEventData(newEvent) };
         return successResponse(res, 'Event created', payload, 201);
       }
@@ -112,31 +110,29 @@ export default {
       title, description, date, centerid,
     } = res.locals.formattedInputs;
     const { event } = res.locals;
-    let updatedEvent = null;
-    if (centerid && event.centerId !== Number(centerid)) {
-      const newChosenCenter = await getCenter(centers, centerid);
-      const centerIsBooked = await isCenterBooked(events, centerid, date);
+    if (centerid && event.centerId.toString() !== centerid) {
+      const newChosenCenter = await getCenter(Center, centerid);
+      const centerIsBooked = await isCenterBooked(Event, centerid, date);
       if (!newChosenCenter) {
         return failureResponse(res, 'The new chosen center does not exist', {}, 404);
       } else if (centerIsBooked) {
         return failureResponse(res, 'The center has been booked for that date');
       } else {
-        updatedEvent = await event.update({
-          title: title || event.title,
-          date: date || event.date,
-          centerId: newChosenCenter.id,
-          centerName: newChosenCenter.name,
-          description: description || event.description,
-        });
+        event.title = title || event.title;
+        event.date = date || event.date;
+        event.centerId = newChosenCenter._id;
+        event.centerName = newChosenCenter.name;
+        event.description = description || event.description;
+        await event.save();
       }
     } else {
-      updatedEvent = await event.update({
-        title: title || event.title,
-        date: date || event.date,
-        description: description || event.description,
-      });
+      event.title = title || event.title;
+      event.date = date || event.date;
+      event.description = description || event.description;
+
+      await event.save();
     }
-    const payload = { event: formatEventData(updatedEvent) };
+    const payload = { event: formatEventData(event) };
     return successResponse(res, 'Event updated', payload);
   },
 
@@ -148,18 +144,17 @@ export default {
    */
   async cancel(req, res) {
     const eventId = req.params.id;
-    const event = await events.findById(Number(eventId), {
-      include: [{ model: users, attributes: ['email'] }],
-    });
+    const event = await Event.findById(eventId).populate('userId', 'email');
     if (!event) {
       return failureResponse(res, 'Event does not exist', {}, 404);
     } else if (event.status === 'canceled') {
       return failureResponse(res, 'Event already canceled');
     } else {
-      await event.update({ status: 'canceled' });
+      event.status = 'canceled';
+      await event.save();
     }
     sendMail({
-      recipient: event.user.email,
+      recipient: event.userId.email,
       subject: 'Your Event Has Been Canceled',
       body: createEmailBody(event.title, event.date),
     });
@@ -175,7 +170,7 @@ export default {
    */
   async delete(req, res) {
     const { event } = res.locals;
-    await event.destroy();
+    await Event.remove({ _id: event._id });
     return successResponse(res, 'Event deleted');
   },
 };
