@@ -47,14 +47,14 @@ export default (state = initialState, action) => {
       const { centerId } = action.payload;
       return {
         ...state,
-        centerToUpdate: Number(centerId),
+        centerToUpdate: centerId,
       };
     }
     case actionTypes.SET_CENTER_TO_TRANSACT: {
       const { centerId } = action.payload;
       return {
         ...state,
-        centerToTransact: Number(centerId)
+        centerToTransact: centerId,
       };
     }
     default: {

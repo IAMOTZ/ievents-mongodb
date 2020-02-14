@@ -56,7 +56,7 @@ const monthToString = (monthNumber) => {
  * @param {Number} id The ID of the center to find
  * @returns {Object} The ceneter that was found.
  */
-const getCenterById = (centers, id) => find(centers, { id: Number(id) });
+const getCenterById = (centers, id) => find(centers, { id });
 
 
 /**

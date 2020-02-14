@@ -46,7 +46,7 @@ export default (state = initialState, action) => {
       const { eventId } = action.payload;
       return {
         ...state,
-        eventToUpdate: Number(eventId),
+        eventToUpdate: eventId,
       };
     }
     default: {
