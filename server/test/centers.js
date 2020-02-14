@@ -3,6 +3,7 @@ import dotEnv from 'dotenv';
 import chai from 'chai';
 import chaiHttp from 'chai-http';
 import app from '../app';
+import helpers from './helpers';
 
 dotEnv.config();
 
@@ -227,6 +228,7 @@ describe('Centers Endpoint', () => {
           const roundedPrice = Number(Number(normalCenterDetails.price).toFixed(2));
           res.body.center.price.should.be.equal(roundedPrice);
           centerId = res.body.center.id;
+          helpers.testGlobals.set('validCenterId1', centerId);
           done();
         },
       );
@@ -238,6 +240,7 @@ describe('Centers Endpoint', () => {
         }),
         (err, res) => {
           res.should.have.status(201);
+          helpers.testGlobals.set('validCenterId2', res.body.center.id);
           done();
         },
       );
@@ -293,14 +296,15 @@ describe('Centers Endpoint', () => {
       modifyCenter(
         alterCenterDetails({ name: 'modified name' }),
         failureAssertions('Center does not exist', 404, done),
-        1000,
+        'aaa146247965a9a0d215aaaa',
       );
     });
-    it('should not modify a center if the center ID is not given as an integer', (done) => {
+    it('should not modify a center if the center ID is not valid', (done) => {
+      // A valid resource ID is a mongoose object ID: mongoose.schema.objecId
       modifyCenter(
         alterCenterDetails({ name: 'modified name' }),
-        failureAssertions('Resource ID must be an integer', 400, done),
-        'nonIntegerId',
+        failureAssertions('Resource ID is not valid', 400, done),
+        'notValidId',
       );
     });
     it('should modify a center', (done) => {
@@ -332,32 +336,22 @@ describe('Centers Endpoint', () => {
   describe('Getting One Center', () => {
     it('should not get a center that does not exist', (done) => {
       getOneCenter(
-        1000,
+        'aaa146247965a9a0d215aaaa',
         failureAssertions('Center does not exist', 404, done),
       );
     });
-    it('should not get a center with non integer ID', (done) => {
+    it('should not get a center with an ID that is not valid', (done) => {
       getOneCenter(
-        'nonIntegerID',
-        failureAssertions('Resource ID must be an integer', 400, done),
+        'notValidID',
+        failureAssertions('Resource ID is not valid', 400, done),
       );
     });
     it('should get the first center', (done) => {
       getOneCenter(
-        1,
+        centerId,
         (err, res) => {
           res.should.have.status(200);
-          res.body.center.id.should.be.eql(1);
-          done();
-        },
-      );
-    });
-    it('should get the second center', (done) => {
-      getOneCenter(
-        2,
-        (err, res) => {
-          res.should.have.status(200);
-          res.body.center.id.should.be.eql(2);
+          res.body.center.id.should.be.eql(centerId);
           done();
         },
       );
