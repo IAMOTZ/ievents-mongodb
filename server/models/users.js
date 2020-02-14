@@ -5,47 +5,29 @@ const hashPassword = (password) => {
   return bcrypt.hashSync(password, salt);
 };
 
-export default (sequelize, DataTypes) => {
-  const users = sequelize.define(
-    'users', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        allowNull: false,
-      },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      email: {
-        type: DataTypes.STRING,
-        unique: true,
-        allowNull: false,
-      },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      role: {
-        type: DataTypes.ENUM,
-        values: ['user', 'admin', 'superAdmin'],
-        defaultValue: 'user',
-      },
+export default (mongoose) => {
+  const { Schema } = mongoose;
+  const usersSchema = new Schema({
+    id: { type: mongoose.ObjectId },
+    name: { type: String },
+    email: {
+      type: String,
+      lowercase: true,
+      unique: true,
     },
-    {
-      hooks: {
-        beforeCreate: (theUser) => {
-          /* eslint-disable no-param-reassign */
-          theUser.password = hashPassword(theUser.password);
-        },
-        beforeUpdate: (theUser) => {
-          if (theUser.changed('password')) {
-            theUser.password = hashPassword(theUser.password);
-          }
-        },
-      },
+    password: { type: String, },
+    role: {
+      type: String,
+      eun: ['user', 'admin', 'superAdmin'],
+      default: 'user',
     },
-  );
-  return users;
+  });
+  // eslint-disable-next-line func-names
+  usersSchema.pre('save', function (next) {
+    if (this.isModified('password')) {
+      this.password = hashPassword(this.password);
+    }
+    next();
+  });
+  return mongoose.model('users', usersSchema);
 };

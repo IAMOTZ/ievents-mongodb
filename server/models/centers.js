@@ -1,30 +1,29 @@
-export default (sequelize, DataTypes) => {
-  const centers = sequelize.define('centers', {
+export default (mongoose) => {
+  const { Schema } = mongoose;
+  const centersSchema = new Schema({
     id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-      allowNull: false,
+      type: mongoose.ObjectId,
     },
     name: {
-      type: DataTypes.STRING,
+      type: String,
       allowNull: false,
+      index: true,
     },
     location: {
-      type: DataTypes.STRING,
+      type: String,
     },
     details: {
-      type: DataTypes.TEXT,
+      type: String,
     },
     capacity: {
-      type: DataTypes.INTEGER,
+      type: Number,
     },
     price: {
-      type: DataTypes.FLOAT,
+      type: mongoose.Types.Decimal128,
     },
     images: {
-      type: DataTypes.ARRAY(DataTypes.STRING),
+      type: [String],
     },
   });
-  return centers;
+  return mongoose.model('centers', centersSchema);
 };
