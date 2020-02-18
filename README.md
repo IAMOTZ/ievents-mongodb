@@ -1,10 +1,8 @@
-# ievents [![Build Status](https://travis-ci.org/IAMOTZ/ievents.svg?branch=develop)](https://travis-ci.org/IAMOTZ/ievents) [![Coverage Status](https://coveralls.io/repos/github/IAMOTZ/Ievents/badge.svg?branch=develop)](https://coveralls.io/github/IAMOTZ/Ievents) [![Maintainability](https://api.codeclimate.com/v1/badges/030535b6a20d86efcd0c/maintainability)](https://codeclimate.com/github/IAMOTZ/Ievents/maintainability)
+# ievents 
 
-This is a web application to help manage event centers - https://ievents-otz.herokuapp.com/   
-Given you manage event centers, this app will help you accept applications to use your center/facilities, and will either decline events when the proposed day is already taken, or suggest an available day.
+This is a web application to help manage event centers.   
+This app is the same as the app [here](https://github.com/IAMOTZ/ievents) but with a MongoDB database instead of PostgreSQL 
 
-## Hosted Application
-The Application is hosted on heroku here: https://ievents-otz.herokuapp.com/
 
 ## API Documentation
 The API for this application is documented here: https://ievents-otz.herokuapp.com/api-docs
@@ -16,7 +14,7 @@ These instructions will get you a copy of the project up and running on your loc
 #### Prerequisites
 - Git
 - Node
-- Postgres Database
+- MongoDB
 - A Cloudinary Account
 
 #### Installation
@@ -67,7 +65,7 @@ Run the following to execute the tests
 ### Development
 - Node
 - Express
-- Postgres
+- MongoDB
 - React
 - Cloudinary
 ### CI Tools

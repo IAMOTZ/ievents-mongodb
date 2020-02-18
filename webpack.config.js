@@ -78,7 +78,7 @@ module.exports = {
     contentBase: path.join(__dirname, 'public'),
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${process.env.PORT}`,
         secure: false,
       },
     },

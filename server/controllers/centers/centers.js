@@ -5,7 +5,7 @@ import {
 } from '../../commonHelpers';
 import { getCenter, formatCenterData, getDatesFromEvents } from './helpers';
 
-const { centers, events } = db;
+const { Center, Event } = db;
 
 export default {
   /**
@@ -16,17 +16,9 @@ export default {
    */
   async getAll(req, res) {
     const { limit, offset } = res.locals;
-    const allCenters = await centers.findAndCountAll({
-      limit,
-      offset,
-      distinct: true,
-      include: [{
-        model: events,
-        attributes: ['status', 'date'],
-      }],
-      order: [['name', 'ASC']]
-    });
-    const currentCentersCount = allCenters.rows.length; const totalCentersCount = allCenters.count;
+    const allCenters = await Center.find({}, null, { limit, skip: offset, sort: { name: 1 } });
+    const currentCentersCount = allCenters.length;
+    const totalCentersCount = await Center.count();
     const paginationInfo = createPaginationInfo(
       limit,
       offset,
@@ -34,7 +26,7 @@ export default {
       totalCentersCount
     );
     const payload = {
-      paginationInfo, centers: allCenters.rows.map(center => formatCenterData(center))
+      paginationInfo, centers: allCenters.map(center => formatCenterData(center))
     };
     return successResponse(res, 'Centers successfully retrieved', payload);
   },
@@ -47,11 +39,12 @@ export default {
    */
   async getOne(req, res) {
     const centerId = req.params.id;
-    const center = await getCenter(centers, centerId, {
-      include: [{
-        model: events,
-        attributes: ['status', 'date'],
-      }],
+    const center = await getCenter(Center, centerId, {
+      // @todo: Do something to fix this commented out eager loading though I'm not sure it's needed
+      // include: [{
+      //   model: events,
+      //   attributes: ['status', 'date'],
+      // }],
     });
     if (!center) {
       return failureResponse(res, 'Center does not exist', {}, 404);
@@ -70,18 +63,18 @@ export default {
   async getBookedDates(req, res) {
     const centerId = req.params.id;
     const { limit, offset } = res.locals;
-    const center = await getCenter(centers, centerId);
+    const center = await getCenter(Center, centerId);
     if (!center) {
       return failureResponse(res, 'Center does not exist', {}, 404);
     }
-    const centerEvents = await events.findAndCountAll({
-      where: { centerId, status: 'allowed' },
-      attributes: ['date'],
-      limit,
-      offset
-    });
-    const bookedDates = getDatesFromEvents(centerEvents.rows);
-    const currentDateCount = centerEvents.rows.length; const totalDateCount = centerEvents.count;
+    const centerEvents = await Event.find(
+      { centerId, status: 'allowed' },
+      { date: 1 },
+      { limit, offset }
+    );
+    const bookedDates = getDatesFromEvents(centerEvents);
+    const currentDateCount = centerEvents.length;
+    const totalDateCount = await Event.count({ centerId, status: 'allowed' });
     const paginationInfo = createPaginationInfo(limit, offset, currentDateCount, totalDateCount);
     const payload = { paginationInfo, bookedDates };
     return successResponse(res, `The dates for center with id ${centerId} successfully retrieved`, payload);
@@ -101,15 +94,15 @@ export default {
     if (req.file) {
       image = await uploadImage(req.file);
     }
-    const newCenter =
-      await centers.create({
-        name,
-        location,
-        details,
-        capacity,
-        price: Number(price).toFixed(2),
-        images: image ? [image.secure_url] : null,
-      });
+    const newCenter = new Center({
+      name,
+      location,
+      details,
+      capacity,
+      price: Number(price).toFixed(2),
+      images: image ? [image.secure_url] : null,
+    });
+    await newCenter.save();
     const payload = { center: formatCenterData(newCenter) };
     return successResponse(res, 'Center created', payload, 201);
   },
@@ -125,7 +118,7 @@ export default {
       name, location, details, capacity, price,
     } = res.locals.formattedInputs;
     const centerId = req.params.id;
-    const center = await getCenter(centers, centerId);
+    const center = await getCenter(Center, centerId);
     if (!center) {
       return failureResponse(res, 'Center does not exist', {}, 404);
     } else {
@@ -134,16 +127,14 @@ export default {
         image = await uploadImage(req.file);
         if (center.images && center.images[0]) await deleteImage(center.images[0]);
       }
-      const updatedCenter =
-        await center.update({
-          name: name || center.name,
-          location: location || center.location,
-          details: details || center.details,
-          capacity: capacity || center.capacity,
-          price: Number(price).toFixed(2) || center.price,
-          images: image ? [image.secure_url] : center.images,
-        });
-      const payload = { center: formatCenterData(updatedCenter) };
+      center.name = name || center.name;
+      center.location = location || center.location;
+      center.details = details || center.details;
+      center.capacity = capacity || center.capacity;
+      center.price = price ? Number(price).toFixed(2) : center.price;
+      center.images = image ? [image.secure_url] : center.images;
+      await center.save();
+      const payload = { center: formatCenterData(center) };
       return successResponse(res, 'Center updated', payload);
     }
   },

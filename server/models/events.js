@@ -1,38 +1,18 @@
-export default (sequelize, DataTypes) => {
-  const events = sequelize.define('events', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-      allowNull: false,
-    },
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    description: {
-      type: DataTypes.TEXT,
-    },
-    date: {
-      type: DataTypes.STRING,
-    },
+export default (mongoose) => {
+  const { Schema } = mongoose;
+  const eventsSchema = new Schema({
+    id: { type: mongoose.ObjectId },
+    title: { type: String },
+    description: { type: String },
+    date: { type: String },
     status: {
-      type: DataTypes.ENUM,
-      values: ['allowed', 'canceled', 'done'],
-      defaultValue: 'allowed',
+      type: String,
+      enum: ['allowed', 'canceled', 'done'],
+      default: 'allowed',
     },
-    centerId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    centerName: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    userId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
+    centerId: { type: mongoose.ObjectId, ref: 'centers', },
+    centerName: { type: String },
+    userId: { type: mongoose.ObjectId, ref: 'users' },
   });
-  return events;
+  return mongoose.model('events', eventsSchema);
 };

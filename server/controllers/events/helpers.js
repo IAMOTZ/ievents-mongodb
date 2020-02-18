@@ -1,20 +1,26 @@
 /**
  * Format the event data to be returned to the user.
  * @param {Object} eventData The raw event data gotten from the database.
+ * @param {Boolean} centerIsPopulated A truthy value to tell weather
+ * or not the associated center is populated
+ * @param {Boolean} userIsPopulated A truthy value to tell weather
+ * or not the associated user is populated
  * @returns {Object} The formatted event data.
  */
-export const formatEventData = eventData => (
+export const formatEventData = (eventData, centerIsPopulated, userIsPopulated) => (
   Object.assign(
     {},
     {
-      id: eventData.id,
-      centerId: eventData.centerId,
+      id: eventData._id,
+      centerId: centerIsPopulated ? eventData.centerId._id : eventData.centerId,
       centerName: eventData.centerName,
-      userId: eventData.userId,
+      userId: userIsPopulated ? eventData.userId._id : eventData.userId,
       title: eventData.title,
       description: eventData.description,
       date: eventData.date,
       status: eventData.status,
+      user: userIsPopulated ? eventData.userId : {},
+      center: centerIsPopulated ? eventData.centerId : {},
     },
   )
 );
@@ -26,7 +32,7 @@ export const formatEventData = eventData => (
  * @returns {Object} The center gotten from the database.
  */
 export const getCenter = async (centerModel, centerId) => {
-  const center = await centerModel.findById(Number(centerId));
+  const center = await centerModel.findById(centerId);
   return center;
 };
 
@@ -40,11 +46,9 @@ export const getCenter = async (centerModel, centerId) => {
 export const isCenterBooked = async (eventModel, centerId, date) => {
   const event =
     await eventModel.findOne({
-      where: {
-        date,
-        centerId,
-        status: 'allowed',
-      },
+      date,
+      centerId,
+      status: 'allowed',
     });
   return !!event;
 };

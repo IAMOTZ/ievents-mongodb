@@ -12,7 +12,7 @@ const app = express();
 
 app.use('/api-docs', express.static(path.join(__dirname, '..', 'public', 'api-docs')));
 
-const { events } = db;
+const { Event } = db;
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger('dev'));
 }
@@ -42,10 +42,10 @@ app.set('port', process.env.PORT || 3000);
 /* eslint-disable no-console */
 app.listen(app.get('port'), () => {
   console.log(`App started on port ${app.get('port')}`);
-  updateEventStatus(events);
+  updateEventStatus(Event);
   const interval = 24 * 60 * 60 * 1000; // One day
   setInterval(() => {
-    updateEventStatus(events);
+    updateEventStatus(Event);
   }, interval);
 });
 

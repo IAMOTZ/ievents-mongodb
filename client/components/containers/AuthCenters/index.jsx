@@ -39,7 +39,7 @@ class AuthCenters extends React.Component {
    * @param {Event} event The event object.
    */
   onEdit = (event) => {
-    this.props.dispatch(setCenterToUpdate(Number(event.target.id)));
+    this.props.dispatch(setCenterToUpdate(event.target.id));
   }
 
   /**
@@ -47,7 +47,7 @@ class AuthCenters extends React.Component {
    * @param {Event} event The event object.
    */
   onBook = (event) => {
-    this.props.dispatch(setCenterToBook(Number(event.target.id)));
+    this.props.dispatch(setCenterToBook(event.target.id));
   }
 
   /**
@@ -55,7 +55,7 @@ class AuthCenters extends React.Component {
    * @param {Event} event The event object.
    */
   onViewTransactions = (event) => {
-    this.props.dispatch(setCenterToTransact(Number(event.currentTarget.id)));
+    this.props.dispatch(setCenterToTransact(event.currentTarget.id));
   }
 
   /**

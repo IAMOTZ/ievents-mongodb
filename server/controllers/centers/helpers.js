@@ -6,7 +6,7 @@
  * @returns {Object} The center gotten from the database.
  */
 export const getCenter = async (centerModel, centerId, options) => {
-  const center = await centerModel.findById(Number(centerId), options);
+  const center = await centerModel.findById(centerId, options);
   return center;
 };
 
@@ -28,7 +28,7 @@ export const formatCenterData = centerData => (
   Object.assign(
     {},
     {
-      id: centerData.id,
+      id: centerData._id,
       name: centerData.name,
       location: centerData.location,
       details: centerData.details,

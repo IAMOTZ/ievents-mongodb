@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import db from '../../models';
 import { failureResponse } from '../../commonHelpers';
 
-const { events, users } = db;
+const { Event, User } = db;
 
 /**
  * A middleware
@@ -22,7 +22,7 @@ export const isUser = (req, res, next) => {
         return failureResponse(res, 'Failed to authenticate token', {}, 401);
       } else {
         req.decoded = decoded;
-        const user = await users.findById(Number(req.decoded.id));
+        const user = await User.findById(req.decoded.id);
         if (!user) {
           return failureResponse(res, 'Failed to authenticate token', {}, 401);
         } else {
@@ -81,10 +81,10 @@ export const isSuperAdmin = (req, res, next) => {
 export const isEventOwner = async (req, res, next) => {
   const userId = req.decoded.id;
   const eventId = req.params.id;
-  const event = await events.findById(Number(eventId));
+  const event = await Event.findById(eventId);
   if (!event) {
     return failureResponse(res, 'Event does not exist', {}, 404);
-  } else if (event.userId !== userId) {
+  } else if (event.userId.toString() !== userId) {
     return failureResponse(res, 'Unauthorised to perform this action', {}, 401);
   } else {
     res.locals.event = event;

@@ -3,13 +3,14 @@ import chai from 'chai';
 import chaiHttp from 'chai-http';
 import db from '../models';
 import app from '../app';
+import helpers from './helpers';
 
 // eslint-disable-next-line no-unused-vars
 const should = chai.should();
 
 chai.use(chaiHttp);
 
-const { users, centers, events } = db;
+const { User, Center, Event } = db;
 
 /**
  * Clear all the data stored in a particular table of the database.
@@ -17,11 +18,7 @@ const { users, centers, events } = db;
  * @returns {Object} The query interface.
  */
 const clearDatabase = async (model) => {
-  await model.destroy({
-    cascade: true,
-    truncate: true,
-    restartIdentity: true,
-  });
+  await model.remove({});
   return model;
 };
 
@@ -48,7 +45,7 @@ let normalEventDetails = {
   title: 'test event',
   description: 'test description',
   date: `${currentYear}/${currentMonth}/${currentDay + 2}`,
-  centerId: 1,
+  centerId: null,
   token: null,
 };
 
@@ -203,6 +200,7 @@ const randomCharacters = length => Array.from({ length }, (e, i) => i).splice(0,
 
 describe('Events Endpoint', () => {
   before('login the user', (done) => {
+    normalEventDetails.centerId = helpers.testGlobals.get('validCenterId1');
     loginUser(
       userDetails1,
       (err, res) => {
@@ -288,21 +286,21 @@ describe('Events Endpoint', () => {
         failureAssertions('Center is required', 400, done),
       );
     });
-    it('should not create event if center value is not an integer', (done) => {
+    it('should not create event if center id is not valid', (done) => {
       createEvent(
-        alterEventDetails({ centerId: 'str' }),
-        failureAssertions('Center id must be an integer in a string format', 400, done),
+        alterEventDetails({ centerId: 'notValidId' }),
+        failureAssertions('Center id is not valid', 400, done),
       );
     });
     it('should not create an event if the  center does not exist', (done) => {
       createEvent(
-        alterEventDetails({ centerId: 1000 }),
+        alterEventDetails({ centerId: 'aaa146247965a9a0d215aaaa' }),
         failureAssertions('The chosen center does not exist', 404, done),
       );
     });
     it('should create an event', (done) => {
       createEvent(
-        normalEventDetails,
+        alterEventDetails({ centerId: helpers.testGlobals.get('validCenterId1') }),
         (err, res) => {
           eventId = res.body.event.id;
           res.should.have.status(201);
@@ -312,7 +310,7 @@ describe('Events Endpoint', () => {
           res.body.event.description.should.be.eql(normalEventDetails.description);
           res.body.event.date.should.be.eql(normalEventDetails.date);
           res.body.event.status.should.be.eql('allowed');
-          res.body.event.centerId.should.be.eql(1);
+          res.body.event.centerId.should.be.eql(helpers.testGlobals.get('validCenterId1'));
           done();
         },
       );
@@ -320,7 +318,7 @@ describe('Events Endpoint', () => {
     it('should create another event', (done) => {
       const date = `${currentYear + 1}/${currentMonth}/${currentDay}`;
       createEvent(
-        alterEventDetails({ centerId: 2, date }),
+        alterEventDetails({ centerId: helpers.testGlobals.get('validCenterId2'), date }),
         (err, res) => {
           res.should.have.status(201);
           res.body.status.should.be.eql('success');
@@ -392,10 +390,10 @@ describe('Events Endpoint', () => {
         failureAssertions('There must be 24hours difference(processing time) between today and the event date.', 400, done),
       );
     });
-    it('should not modify event if center value is not an integer', (done) => {
+    it('should not modify event if center value is not valid', (done) => {
       modifyEvent(
         alterEventDetails({ centerId: 'str' }),
-        failureAssertions('Center id must be an integer in a string format', 400, done),
+        failureAssertions('Center id is not valid', 400, done),
       );
     });
     it('should not modify event if user is not the event owner', (done) => {
@@ -406,22 +404,22 @@ describe('Events Endpoint', () => {
     });
     it('should not modify event if the new chosen center does not exist', (done) => {
       modifyEvent(
-        alterEventDetails({ centerId: 1000 }),
+        alterEventDetails({ centerId: 'aaa146247965a9a0d215aaaa' }),
         failureAssertions('The new chosen center does not exist', 404, done),
       );
     });
     it('should not modify event if the new chosen center is booked for the date', (done) => {
       const date = `${currentYear + 1}/${currentMonth}/${currentDay}`;
       modifyEvent(
-        alterEventDetails({ centerId: 2, date }),
+        alterEventDetails({ centerId: helpers.testGlobals.get('validCenterId2'), date }),
         failureAssertions('The center has been booked for that date', 400, done),
       );
     });
-    it('should not modify event if the event ID is not given as an integer', (done) => {
+    it('should not modify event if the event ID is not valid', (done) => {
       modifyEvent(
         alterEventDetails({ title: 'modified title' }),
-        failureAssertions('Resource ID must be an integer', 400, done),
-        'nonIntegerID',
+        failureAssertions('Resource ID is not valid', 400, done),
+        'notValidID',
       );
     });
     it('should modify event', (done) => {
@@ -429,7 +427,7 @@ describe('Events Endpoint', () => {
         alterEventDetails({
           title: 'modified title',
           description: 'modified description',
-          centerId: 2,
+          centerId: helpers.testGlobals.get('validCenterId2'),
         }),
         (err, res) => {
           res.should.have.status(200);
@@ -437,7 +435,7 @@ describe('Events Endpoint', () => {
           res.body.message.should.be.eql('Event updated');
           res.body.event.title.should.be.eql('modified title');
           res.body.event.description.should.be.eql('modified description');
-          res.body.event.centerId.should.be.eql(2);
+          res.body.event.centerId.should.be.eql(helpers.testGlobals.get('validCenterId2'));
           done();
         },
       );
@@ -459,10 +457,10 @@ describe('Events Endpoint', () => {
   });
 
   describe('Getting Events of a Single Center', () => {
-    it('should not get events if the center ID is not given as integer', (done) => {
+    it('should not get events if the center ID is not valid', (done) => {
       getCenterEvents(
         { token: userToken1 },
-        failureAssertions('Resource ID must be an integer', 400, done),
+        failureAssertions('Resource ID is not valid', 400, done),
         'akldfjal;d' // ID of wrong type
       );
     });
@@ -470,7 +468,7 @@ describe('Events Endpoint', () => {
       getCenterEvents(
         { token: userToken2 }, // Auth-Token of a user that is not an admin
         failureAssertions('You are unauthorized to perform this action', 401, done),
-        2
+        'aaa146247965a9a0d215aaaa'
       );
     });
     it('should get the events of a single center', (done) => {
@@ -484,7 +482,7 @@ describe('Events Endpoint', () => {
           res.body.events[0].user.email.should.be.a('string');
           done();
         },
-        2 // ID of a center that exist
+        helpers.testGlobals.get('validCenterId2') // ID of a center that exist
       );
     });
     it('should get the events of a single center by pagination', (done) => {
@@ -504,23 +502,23 @@ describe('Events Endpoint', () => {
           res.body.paginationInfo.totalCount.should.be.eql(2);
           done();
         },
-        2, // ID of a center that exist
+        helpers.testGlobals.get('validCenterId2'), // ID of a center that exist
         { limit: 1 }
       );
     });
   });
 
   describe('Getting the dates a center has been booked', () => {
-    it('should not get booked dates if the center ID is not given as integer', (done) => {
+    it('should not get booked dates if the center ID is not valid', (done) => {
       getCenterBookedDates(
-        failureAssertions('Resource ID must be an integer', 400, done),
+        failureAssertions('Resource ID is not valid', 400, done),
         'aldkfasdkf' // ID of wrong type
       );
     });
     it('should not get dates if the center does not exist', (done) => {
       getCenterBookedDates(
         failureAssertions('Center does not exist', 404, done),
-        44430 // ID of center that does not exist.
+        'aaa146247965a9a0d215aaaa' // ID of center that does not exist.
       );
     });
     it('should get booked dates of a center', (done) => {
@@ -533,7 +531,7 @@ describe('Events Endpoint', () => {
           res.body.bookedDates[0].should.be.a('string');
           done();
         },
-        2
+        helpers.testGlobals.get('validCenterId2')
       );
     });
     it('should get booked dates of a center by pagination', (done) => {
@@ -552,7 +550,7 @@ describe('Events Endpoint', () => {
           res.body.paginationInfo.totalCount.should.be.eql(2);
           done();
         },
-        2,
+        helpers.testGlobals.get('validCenterId2'),
         { limit: 1 }
       );
     });
@@ -603,13 +601,13 @@ describe('Events Endpoint', () => {
       cancelEvent(
         { token: userToken1 },
         failureAssertions('Event does not exist', 404, done),
-        44 // ID of an event that does not exist
+        'aaa146247965a9a0d215aaaa'// ID of an event that does not exist
       );
     });
     it('should not cancel event if the event ID is not given as integer', (done) => {
       cancelEvent(
         { token: userToken1 },
-        failureAssertions('Resource ID must be an integer', 400, done),
+        failureAssertions('Resource ID is not valid', 400, done),
         'string', // ID as a string instead of integer
       );
     });
@@ -651,14 +649,14 @@ describe('Events Endpoint', () => {
       deleteEvent(
         { token: userToken1 },
         failureAssertions('Event does not exist', 404, done),
-        1000,
+        'aaa146247965a9a0d215aaaa',
       );
     });
-    it('should not delete event if the event ID is not given as an integer', (done) => {
+    it('should not delete event if the event ID is not valid', (done) => {
       deleteEvent(
         { token: userToken1 },
-        failureAssertions('Resource ID must be an integer', 400, done),
-        'nonIntegerID',
+        failureAssertions('Resource ID is not valid', 400, done),
+        'notValidId',
       );
     });
     it('should delete event', (done) => {
@@ -675,8 +673,8 @@ describe('Events Endpoint', () => {
   });
 
   after('Remove all the data created in the database', async () => {
-    await clearDatabase(events);
-    await clearDatabase(centers);
-    await clearDatabase(users);
+    await clearDatabase(Event);
+    await clearDatabase(Center);
+    await clearDatabase(User);
   });
 });

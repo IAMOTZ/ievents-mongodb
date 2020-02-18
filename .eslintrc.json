@@ -48,6 +48,7 @@
         "matchDescription": ".+",
         "requireReturn": false
       }
-    ]
+    ],
+    "no-underscore-dangle": "off"
   }
 }
